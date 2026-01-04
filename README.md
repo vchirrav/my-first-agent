@@ -1,3 +1,5 @@
+![Project Architecture Evolution](vis_architecture_evolution.png)
+
 # Local Multi-Agent Systems: Supervisor Architectures
 
 **A secure, local-first exploration of Multi-Agent patterns using LangGraph, Agent-to-Agent (A2A), MCP, and Ollama.**

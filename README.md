@@ -1,31 +1,30 @@
-# My First AI Agent
+# Local Multi-Agent System (Supervisor Architecture)
 
-**A secure, local-first AI agent template built with LangGraph, Ollama, and SQLite.**
+**A secure, local-first Multi-Agent system built with LangGraph, Ollama, and Model Context Protocol (MCP).**
 
-This project demonstrates a structured **7-layer architectural framework** for building stateful, autonomous agents that run entirely on your local machine. It uses Llama 3.1 for reasoning and **Model Context Protocol (MCP)** for tool execution.
+This project demonstrates an enterprise-grade **Supervisor-Worker Architecture**. Instead of a single generalist agent, a "Supervisor" LLM intelligently routes tasks to specialized "Worker" agents (File Specialist & Math Specialist), which execute tools via a local MCP server.
 
-## Architecture (The 7 Steps)
+## Architecture
 
-This agent is built following a strict 7-step process defined for enterprise-grade AI development:
+The system operates on a **Hub-and-Spoke** model:
 
-1.  **System Prompt:** Defines the agent's goal, role, and security constraints.
-2.  **LLM (Local):** Uses **Llama 3.1** via Ollama for privacy and offline capability.
-3.  **Tools (MCP):** Tools are decoupled into a standalone **MCP Server** (`mcp_server.py`) using `fastmcp`.
-4.  **Memory:** Persistent conversation history using **SQLite**.
-5.  **Orchestration:** **LangGraph** manages the cyclic workflow (Agent → Tool → Agent).
-6.  **UI:** Dual interface support: **Command Line Interface (CLI)** and **Streamlit Web GUI**.
-7.  **Evals:** Hooks for LangSmith (optional) for analyzing and improving performance.
+1.  **Supervisor (Manager):** Analyzes the user's complex request and decides which specialist needs to act next. It maintains the global state.
+2.  **Workers (Specialists):**
+    * **File Agent:** Specialized prompt context. Access to `list_directory` and `check_file_exists`.
+    * **Math Agent:** Specialized prompt context. Access to `calculator`.
+3.  **MCP Server (Tools):** A standalone server (`mcp_server.py`) that hosts the actual Python functions, decoupled from the agents.
+4.  **Orchestration:** **LangGraph** manages the state transitions (Supervisor → Worker → Tool → Supervisor).
 
 ## Prerequisites
 
-Before running the agent, ensure you have the following installed:
+Before running the system, ensure you have the following installed:
 
 1.  **Python 3.11+**
 2.  **[uv](https://github.com/astral-sh/uv)** (Fast Python package installer) or standard `pip`.
 3.  **[Ollama](https://ollama.com/)** running locally.
 
 ### Setup Local Model
-You must have the `llama3.1` model pulled, as it supports tool calling natively.
+You must have the `llama3.1` model pulled.
 
 ```bash
 ollama pull llama3.1
@@ -50,7 +49,7 @@ ollama pull llama3.1
     # Mac/Linux:
     source .venv/bin/activate
     
-    # Install packages (Now includes 'fastmcp' and 'mcp')
+    # Install required packages
     uv pip install langchain langchain-community langchain-ollama langgraph langsmith langgraph-checkpoint-sqlite streamlit fastmcp mcp pydantic
     ```
 
@@ -58,55 +57,48 @@ ollama pull llama3.1
 
 Ensure Ollama is running in the background (`ollama serve`).
 
-### Option 1: Run the Web GUI (MCP Enabled)
-Launch the agent in a browser. The GUI automatically connects to the local MCP server to access tools.
+### 1. Run the Multi-Agent GUI
+This launches the Supervisor system. The GUI will visualize the hand-offs between the Manager and the Workers.
+
+```bash
+streamlit run multi_agent.py
+```
+* **Note:** The application will automatically connect to the local MCP server for tools.
+
+### 2. (Optional) Run Single-Agent Mode
+If you want to test the simpler, single-agent version:
 
 ```bash
 streamlit run gui.py
 ```
-* **Architecture:** The GUI acts as an **MCP Client**.
-* **Features:** Visual chat history, real-time tool logs, sidebar controls, and independent memory (`gui_memory.sqlite`).
-* **Tools Available:** File Checker, Directory Lister, Calculator.
 
-### Option 2: Run the CLI (Classic)
-Run the agent directly in your terminal (uses internal tool definitions).
-
-```bash
-python main.py
-```
-
-### Example Interactions
-The agent supports natural language queries. Try these examples:
-* *"What files are in this directory?"*
-* *"Does the file mcp_server.py exist?"*
-* *"Calculate log 10 base 10."*
-* *"Calculate 25 * 40 + 10."*
+### Example Multi-Agent Interactions
+Try compound queries that require both specialists to collaborate:
+* *"List the files in this directory, and then calculate 500 * 5 based on what you find."*
+* *"Check if 'data.csv' exists, and if not, calculate how much disk space I need for 1GB."*
 
 ## Security Guardrails
 
-This project implements specific security measures at the code level:
-* **Prompt Hardening:** System prompts use delimiters to separate instructions from user input.
-* **Path Traversal Protection:** The file tool blocks access to parent directories (`..`) or absolute paths.
-* **Input Sanitization:** The calculator tool prevents code injection by restricting characters.
-* **Strict Schemas:** Tools use **Pydantic** schemas to prevent hallucinated arguments.
-* **Local Execution:** No data leaves your machine (unless you explicitly enable LangSmith tracing).
+* **Role Separation:** The Math Agent cannot access file tools, and the File Agent cannot access math tools.
+* **Supervisor Validation:** The Supervisor can decide to `FINISH` the conversation if a request is unsafe or off-topic.
+* **MCP Isolation:** Tools run in a separate process (`mcp_server.py`), ensuring a clean boundary between the LLM reasoning and code execution.
 
 ## Project Structure
 
 ```text
 my-first-agent/
-├── main.py               # CLI Agent code (Classic Mode)
-├── gui.py                # Streamlit Web Interface (MCP Client)
-├── mcp_server.py         # Standalone MCP Server (Tools Host)
-├── agent_memory.sqlite   # Memory DB for CLI session
-├── gui_memory.sqlite     # Memory DB for GUI session (auto-created)
+├── multi_agent.py        # SUPERVISOR SYSTEM (Multi-Agent Logic)
+├── gui.py                # Single-Agent Interface (Legacy)
+├── mcp_server.py         # Shared MCP Server (Tools Host)
+├── mcp_client.py         # MCP Client utilities
+├── multi_agent_memory.sqlite # Memory DB for Multi-Agent sessions
 ├── .venv/                # Virtual environment
 └── README.md             # Project documentation
 ```
 
 ## Observability (Optional)
 
-To trace the agent's decision-making process with **LangSmith**, set these environment variables before running:
+To trace the Supervisor's decision-making process with **LangSmith**, set these environment variables:
 
 ```bash
 export LANGCHAIN_TRACING_V2=true

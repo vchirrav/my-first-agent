@@ -13,7 +13,7 @@ This agent is built following a strict 7-step process defined for enterprise-gra
 3.  **Tools:** Custom Python tools with input validation (File System Check, Calculator).
 4.  **Memory:** Persistent conversation history using **SQLite**.
 5.  **Orchestration:** **LangGraph** manages the cyclic workflow (Agent → Tool → Agent).
-6.  **UI:** Simple Command Line Interface (CLI) for interaction.
+6.  **UI:** Dual interface support: **Command Line Interface (CLI)** and **Streamlit Web GUI**.
 7.  **Evals:** Hooks for LangSmith (optional) for analyzing and improving performance.
 
 ## Prerequisites
@@ -50,25 +50,34 @@ ollama pull llama3.1
     # Mac/Linux:
     source .venv/bin/activate
     
-    # Install packages
-    uv pip install langchain langchain-community langchain-ollama langgraph langsmith langgraph-checkpoint-sqlite
+    # Install packages (including Streamlit for the GUI)
+    uv pip install langchain langchain-community langchain-ollama langgraph langsmith langgraph-checkpoint-sqlite streamlit
     ```
 
 ## Usage
 
-1.  **Start Ollama**
-    Ensure Ollama is running in the background (`ollama serve`).
+Ensure Ollama is running in the background (`ollama serve`) before running either interface.
 
-2.  **Run the Agent**
-    ```bash
-    python main.py
-    ```
+### Option 1: Run the Web GUI (New)
+Launch the agent in a browser with a high-contrast, clean light theme.
 
-3.  **Interact**
-    The agent supports natural language queries. Try these examples:
-    * *"Is there a file called main.py in this folder?"*
-    * *"Calculate 25 * 40 + 10."*
-    * *"Check if secret.txt exists."*
+```bash
+streamlit run gui.py
+```
+* **Features:** Visual chat history, real-time tool execution logs, sidebar controls, and independent memory (`gui_memory.sqlite`).
+
+### Option 2: Run the CLI
+Run the agent directly in your terminal.
+
+```bash
+python main.py
+```
+
+### Example Interactions
+The agent supports natural language queries. Try these examples:
+* *"Is there a file called README.md in this folder?"*
+* *"Calculate 25 * 40 + 10."*
+* *"Check if secret.txt exists."*
 
 ## Security Guardrails
 
@@ -82,10 +91,12 @@ This project implements specific security measures at the code level:
 
 ```text
 my-first-agent/
-├── main.py                # Complete agent code (Steps 1-7)
-├── agent_memory.sqlite    # Local database for conversation history (created on run)
-├── .venv/                 # Virtual environment
-└── README.md              # Project documentation
+├── main.py               # CLI Agent code
+├── gui.py                # Streamlit Web Interface code
+├── agent_memory.sqlite   # Memory DB for CLI session
+├── gui_memory.sqlite     # Memory DB for GUI session (auto-created)
+├── .venv/                # Virtual environment
+└── README.md             # Project documentation
 ```
 
 ## Observability (Optional)
@@ -96,5 +107,3 @@ To trace the agent's decision-making process with **LangSmith**, set these envir
 export LANGCHAIN_TRACING_V2=true
 export LANGCHAIN_API_KEY="your-api-key"
 ```
-
----

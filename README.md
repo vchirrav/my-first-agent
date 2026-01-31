@@ -139,6 +139,46 @@ export LANGCHAIN_TRACING_V2=true
 export LANGCHAIN_API_KEY="your-api-key"
 ```
 
+## Security Scanning with Semgrep
+
+This project includes a Claude Code [skill](https://code.claude.com/docs/en/skills) (`.claude/skills/semgrep-scan/SKILL.md`) that runs a comprehensive Semgrep SAST scan, triages findings against the actual source code, and generates an HTML vulnerability report.
+
+### Prerequisites
+
+1. **[Semgrep](https://semgrep.dev/)** installed and authenticated:
+   ```bash
+   pip install semgrep
+   semgrep login
+   semgrep install-semgrep-pro
+   ```
+2. **[Claude Code](https://claude.ai/code)** CLI installed with the Semgrep plugin enabled.
+
+### Running the Scan
+
+Open Claude Code in the project directory and invoke the skill:
+
+```
+/semgrep-scan
+```
+
+You can also pass optional arguments to narrow the scope or change the ruleset:
+
+```
+/semgrep-scan --path src/
+/semgrep-scan --config p/owasp-top-ten
+```
+
+### What the Skill Does
+
+1. **Runs Semgrep Pro** with 900+ rules against all project files.
+2. **Triages every finding** by reading the surrounding source code, tracing data flow, and evaluating existing mitigations.
+3. **Classifies findings** as true positive or false positive, with severity ratings (Critical / High / Medium / Low).
+4. **Generates `semgrep_report.html`** in the project root -- a self-contained dark-themed HTML report with code snippets, analysis, attack vectors, and remediation guidance.
+
+The skill is read-only and never modifies source code.
+
+---
+
 ## Troubleshooting
 
 * **A2A Connection Errors?** Ensure `file_agent.py` and `math_agent.py` are running in separate terminals before starting the GUI.

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semgrep Security Scan Report - my-first-agent</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --critical: #f85149;
+    --high: #f0883e;
+    --medium: #d29922;
+    --low: #8b949e;
+    --green: #3fb950;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  header h1 { font-size: 1.75rem; font-weight: 600; }
+  header p { color: var(--text-muted); margin-top: 0.25rem; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .meta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+  .meta-card .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .meta-card .value { font-size: 1.5rem; font-weight: 600; margin-top: 0.25rem; }
+  .meta-card .value.critical { color: var(--critical); }
+  .meta-card .value.high { color: var(--high); }
+  .meta-card .value.medium { color: var(--medium); }
+  .meta-card .value.green { color: var(--green); }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 2rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .finding-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .severity-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .severity-critical { background: rgba(248,81,73,0.15); color: var(--critical); border: 1px solid rgba(248,81,73,0.3); }
+  .severity-high { background: rgba(240,136,62,0.15); color: var(--high); border: 1px solid rgba(240,136,62,0.3); }
+  .severity-medium { background: rgba(210,153,34,0.15); color: var(--medium); border: 1px solid rgba(210,153,34,0.3); }
+
+  .finding-title { font-weight: 600; font-size: 1rem; }
+  .finding-body { padding: 1.25rem; }
+  .finding-body .field { margin-bottom: 1rem; }
+  .finding-body .field-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+  .finding-body .field-value { font-size: 0.9rem; }
+  .location {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    color: var(--accent);
+    font-size: 0.85rem;
+  }
+  pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  .code-highlight { color: var(--critical); font-weight: 600; }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    background: rgba(88,166,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(88,166,255,0.2);
+    margin-right: 0.4rem;
+    margin-bottom: 0.3rem;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .remediation {
+    background: rgba(63,185,80,0.06);
+    border: 1px solid rgba(63,185,80,0.2);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+  .remediation strong { color: var(--green); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  .summary-table th, .summary-table td {
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .summary-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .verdict-true { color: var(--critical); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Semgrep Security Scan Report</h1>
+  <p>Project: my-first-agent &mdash; True Positive Vulnerability Analysis</p>
+</header>
+
+<div class="meta-grid">
+  <div class="meta-card">
+    <div class="label">Scan Engine</div>
+    <div class="value" style="font-size:1rem;">Semgrep Pro v1.150.0</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Rules Evaluated</div>
+    <div class="value green">936</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Files Scanned</div>
+    <div class="value" style="color:var(--accent);">15</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">Total Findings</div>
+    <div class="value critical">3</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">True Positives</div>
+    <div class="value critical">3</div>
+  </div>
+  <div class="meta-card">
+    <div class="label">False Positives</div>
+    <div class="value green">0</div>
+  </div>
+</div>
+
+<h2 class="section-title">Summary</h2>
+<table class="summary-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>File</th>
+      <th>Line</th>
+      <th>Assessed Severity</th>
+      <th>Vulnerability</th>
+      <th>Verdict</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td class="location">math_agent.py</td>
+      <td>42</td>
+      <td><span class="severity-badge severity-critical">Critical</span></td>
+      <td>Unsandboxed eval() &mdash; No Input Sanitization</td>
+      <td class="verdict-true">True Positive</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td class="location">main.py</td>
+      <td>76</td>
+      <td><span class="severity-badge severity-high">High</span></td>
+      <td>eval() Without Builtin Restriction</td>
+      <td class="verdict-true">True Positive</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td class="location">mcp_server.py</td>
+      <td>41</td>
+      <td><span class="severity-badge severity-medium">Medium</span></td>
+      <td>eval() With Bypassable Sandbox</td>
+      <td class="verdict-true">True Positive</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<!-- FINDING 1: math_agent.py -->
+<!-- ============================================================ -->
+<h2 class="section-title">Detailed Findings</h2>
+
+<div class="finding">
+  <div class="finding-header">
+    <span class="severity-badge severity-critical">Critical</span>
+    <span class="finding-title">Finding #1 &mdash; Unsandboxed eval() with No Input Sanitization</span>
+  </div>
+  <div class="finding-body">
+    <div class="field">
+      <div class="field-label">Location</div>
+      <div class="field-value location">math_agent.py : line 42, col 22</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Semgrep Rule</div>
+      <div class="field-value">
+        <a href="https://semgrep.dev/playground/r/bZT537Q/python.lang.security.audit.eval-detected.eval-detected" target="_blank">
+          python.lang.security.audit.eval-detected.eval-detected
+        </a>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">CWE / OWASP</div>
+      <div class="field-value">
+        <span class="tag">CWE-95: Eval Injection</span>
+        <span class="tag">OWASP A03:2021 Injection</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Vulnerable Code</div>
+<pre><span style="color:var(--text-muted)">39</span>  try:
+<span style="color:var(--text-muted)">40</span>      expression = user_text.replace("calculate", "").strip()
+<span style="color:var(--text-muted)">41</span>      safe_dict = {k: v for k, v in math.__dict__.items() if not k.startswith("__")}
+<span style="color:var(--text-muted)">42</span>      result = <span class="code-highlight">eval(expression, {"__builtins__": None}, safe_dict)</span>
+<span style="color:var(--text-muted)">43</span>      response = str(result)</pre>
+    </div>
+    <div class="field">
+      <div class="field-label">Analysis</div>
+      <div class="field-value">
+        This is the most dangerous finding. The <code>expression</code> variable is derived directly from
+        user input received over HTTP via the A2A protocol, with <strong>no input sanitization</strong>
+        whatsoever &mdash; the only transformation is stripping the word "calculate". While
+        <code>__builtins__</code> is set to <code>None</code>, this sandbox is <strong>known to be
+        bypassable</strong> via attribute access chains such as
+        <code>().__class__.__bases__[0].__subclasses__()</code>, which can be used to recover
+        arbitrary builtins and execute system commands. Since all characters (including underscores,
+        brackets, and dots) are permitted in the input, an attacker can craft a payload to
+        escape the sandbox and achieve <strong>Remote Code Execution (RCE)</strong>.
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Attack Vector</div>
+      <div class="field-value">
+        An attacker sends a crafted HTTP request to the A2A endpoint at <code>localhost:8002</code> with
+        a payload like:<br>
+        <pre>().__class__.__bases__[0].__subclasses__()[X]('command').read()</pre>
+        Where <code>X</code> is the index of a dangerous subclass (e.g., <code>os._wrap_close</code>).
+        This bypasses the <code>__builtins__: None</code> restriction entirely.
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Remediation</div>
+      <div class="remediation">
+        <strong>Recommended:</strong> Replace <code>eval()</code> with a safe math parser such as
+        <code>numexpr</code>, <code>asteval</code>, or Python's <code>ast.literal_eval()</code> for
+        simple expressions. At minimum, add strict input validation using a character whitelist
+        (digits, operators, parentheses, decimal points only) before the eval call. Strip underscores,
+        brackets, and dots-followed-by-letters from input.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FINDING 2: main.py -->
+<!-- ============================================================ -->
+<div class="finding">
+  <div class="finding-header">
+    <span class="severity-badge severity-high">High</span>
+    <span class="finding-title">Finding #2 &mdash; eval() Without Builtin Restriction</span>
+  </div>
+  <div class="finding-body">
+    <div class="field">
+      <div class="field-label">Location</div>
+      <div class="field-value location">main.py : line 76, col 20</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Semgrep Rule</div>
+      <div class="field-value">
+        <a href="https://semgrep.dev/playground/r/bZT537Q/python.lang.security.audit.eval-detected.eval-detected" target="_blank">
+          python.lang.security.audit.eval-detected.eval-detected
+        </a>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">CWE / OWASP</div>
+      <div class="field-value">
+        <span class="tag">CWE-95: Eval Injection</span>
+        <span class="tag">OWASP A03:2021 Injection</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Vulnerable Code</div>
+<pre><span style="color:var(--text-muted)">68</span>  # SECURITY GUARDRAIL: Input Sanitization
+<span style="color:var(--text-muted)">69</span>  # We only allow specific safe characters to prevent code injection via eval()
+<span style="color:var(--text-muted)">70</span>  allowed = set("0123456789+-*/(). ")
+<span style="color:var(--text-muted)">71</span>  if not set(expression).issubset(allowed):
+<span style="color:var(--text-muted)">72</span>      return "Error: Invalid characters ..."
+<span style="color:var(--text-muted)">73</span>
+<span style="color:var(--text-muted)">74</span>  try:
+<span style="color:var(--text-muted)">75</span>      # Note: In a real production app, use a safer math library
+<span style="color:var(--text-muted)">76</span>      return str(<span class="code-highlight">eval(expression)</span>)</pre>
+    </div>
+    <div class="field">
+      <div class="field-label">Analysis</div>
+      <div class="field-value">
+        The <code>eval()</code> call has <strong>no sandbox</strong> &mdash; it does not restrict
+        <code>__builtins__</code> or limit the global/local namespace. While the character whitelist
+        (<code>0-9 + - * / ( ) . space</code>) blocks alphabetic characters, making it difficult to
+        call functions like <code>__import__</code> or <code>exec</code>, the unrestricted
+        <code>eval()</code> is a defense-in-depth failure. The character filter is the <em>only</em>
+        protection layer, and if it were ever loosened (e.g., to support math function names),
+        full code execution would be immediately possible. Additionally, expressions containing only
+        the allowed characters could still cause denial of service via deeply nested parentheses or
+        very large number computations (e.g., <code>9**9**9**9</code>).
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Attack Vector</div>
+      <div class="field-value">
+        The expression is passed through an LLM tool call, which is influenced by user prompts.
+        While the character filter is restrictive, a <strong>resource exhaustion</strong> attack is
+        possible with an expression like <code>9**9**9**9</code> (allowed by the character set), which
+        can cause the process to hang or crash.
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Remediation</div>
+      <div class="remediation">
+        <strong>Recommended:</strong> Replace <code>eval()</code> with a safe math evaluation library
+        (e.g., <code>numexpr</code>, <code>simpleeval</code>, or <code>ast.literal_eval()</code>).
+        If <code>eval()</code> must be retained, add <code>{"__builtins__": None}</code> as the
+        globals parameter as a defense-in-depth measure, and add an expression length limit to
+        prevent resource exhaustion.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FINDING 3: mcp_server.py -->
+<!-- ============================================================ -->
+<div class="finding">
+  <div class="finding-header">
+    <span class="severity-badge severity-medium">Medium</span>
+    <span class="finding-title">Finding #3 &mdash; eval() With Bypassable Sandbox</span>
+  </div>
+  <div class="finding-body">
+    <div class="field">
+      <div class="field-label">Location</div>
+      <div class="field-value location">mcp_server.py : line 41, col 18</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Semgrep Rule</div>
+      <div class="field-value">
+        <a href="https://semgrep.dev/playground/r/bZT537Q/python.lang.security.audit.eval-detected.eval-detected" target="_blank">
+          python.lang.security.audit.eval-detected.eval-detected
+        </a>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">CWE / OWASP</div>
+      <div class="field-value">
+        <span class="tag">CWE-95: Eval Injection</span>
+        <span class="tag">OWASP A03:2021 Injection</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Vulnerable Code</div>
+<pre><span style="color:var(--text-muted)">34</span>  allowed_chars = set("0123456789+-*/()., abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+<span style="color:var(--text-muted)">35</span>
+<span style="color:var(--text-muted)">36</span>  if not set(expression).issubset(allowed_chars):
+<span style="color:var(--text-muted)">37</span>      return "Error: Invalid characters. Only math expressions allowed."
+<span style="color:var(--text-muted)">38</span>
+<span style="color:var(--text-muted)">39</span>  try:
+<span style="color:var(--text-muted)">40</span>      safe_math = {k: v for k, v in math.__dict__.items() if not k.startswith("__")}
+<span style="color:var(--text-muted)">41</span>      result = <span class="code-highlight">eval(expression, {"__builtins__": None}, safe_math)</span>
+<span style="color:var(--text-muted)">42</span>      return str(result)</pre>
+    </div>
+    <div class="field">
+      <div class="field-label">Analysis</div>
+      <div class="field-value">
+        This is the best-defended of the three instances, employing <strong>two layers of protection</strong>:
+        a character whitelist and a restricted <code>eval()</code> namespace. The character whitelist
+        blocks underscores (<code>_</code>) and square brackets (<code>[]</code>), which prevents the
+        most common <code>__builtins__: None</code> bypass techniques (e.g.,
+        <code>__class__.__subclasses__()</code>). However, <code>eval()</code> remains fundamentally
+        unsafe. The allowed character set includes all letters and parentheses, providing access to all
+        <code>math</code> module functions in the namespace. While no known trivial exploit exists
+        with this exact configuration, the use of <code>eval()</code> on user-influenced input is a
+        recognized security anti-pattern. Resource exhaustion attacks are possible via expressions
+        like <code>pow(9,pow(9,9))</code> since <code>pow</code> is available through the math namespace.
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Attack Vector</div>
+      <div class="field-value">
+        Input arrives via MCP tool calls triggered by user prompts to the LLM. The math namespace
+        exposes functions that can be chained or abused for resource exhaustion. E.g.,
+        <code>pow(9, pow(9, 9))</code> would attempt to compute an astronomically large number.
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Remediation</div>
+      <div class="remediation">
+        <strong>Recommended:</strong> Replace <code>eval()</code> with a dedicated safe math parser
+        such as <code>numexpr</code> or <code>simpleeval</code>. These libraries evaluate mathematical
+        expressions without exposing Python's code execution capabilities. If keeping <code>eval()</code>,
+        add an expression length limit and consider restricting the math namespace to only the specific
+        functions needed (e.g., <code>sqrt</code>, <code>log</code>, <code>sin</code>, <code>cos</code>)
+        rather than exposing the entire <code>math</code> module.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Report generated on 2026-01-31 by Semgrep Pro v1.150.0 with Claude Code analysis.
+  <br>Configuration: <code>--pro --config auto</code> &mdash; 936 rules evaluated across 15 files.
+</footer>
+
+</div>
+</body>
+</html>
